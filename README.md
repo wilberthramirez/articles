@@ -1,2 +1,2 @@
 # articles
-Posts dedicated to share the code for analaysis and visuals posted on different venues, such as www.LinkedIn.com or company blogs.
+Posts dedicated to share the code for analaysis and visuals posted on my [linkedin profile](https://www.linkedin.com/in/wilberthramirez/) or at [Wisdom Analytics' Blog](http://www.wisdomanalytics.net/blog/).
