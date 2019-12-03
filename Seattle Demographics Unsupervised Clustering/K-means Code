@@ -1,0 +1,93 @@
+#article link 
+Link to the [article](https://www.linkedin.com/pulse/target-brand-new-customers-data-science-wilberth-ramirez/)
+
+#libraries loading
+
+library(tidyverse)
+library(stringr)
+library(factoextra)
+library(cluster)
+library(ggrepel)
+library(dplyr)
+library(plyr)
+library(ggplot2)
+library(extrafontdb)
+library(extrafont)
+library(stringi)
+
+# Source data----
+https://data.seattle.gov/City-Business/City-of-Seattle-Staff-Demographics/5avq-r9hj
+
+# Reading the file from downlods folder
+sea_dem <- read.csv("~/Downloads/City_of_Seattle_Staff_Demographics.csv", stringsAsFactors=FALSE)  
+
+sea_dem = sea_dem %>% 
+  dplyr::select(Race=Race.Ethnicity,Employee_Type = Regular.Temporary,everything()) %>% 
+  mutate_at(vars(Race),~mapvalues(., from=c("Hispanic or Latino","Black or African American","Nat Hawaiian/Oth Pac Islander","Two or More Races"),
+                                  to = c("Hispanic","African American","Nat Hawaiian","Multi-Race"))) %>%  
+  mutate_at(vars(Employee_Type),~mapvalues(.,from = c("R","T"), to=c("Regular","Temporary"))) %>% 
+  mutate_at(vars(Employee.Status),~mapvalues(., from = c("A","L","P"), to = c("Active","Leave","Paid-Leave"))) %>%
+  mutate_at(vars(Department),~str_replace(.,"Department","Dept.")) %>% 
+  mutate_at(vars(Department),~str_replace(.,"Development","Dev.")) %>% 
+  filter(Employee_Type=="Regular",Employee.Status=="Active", Race !="Not Specified") 
+
+
+#clustering by department 
+dept_clust = sea_dem %>% 
+  dplyr::mutate_if(is.numeric,~scale(.)) %>%
+  dplyr::distinct(Department, .keep_all = T) %>% 
+  dplyr::select(Age, Hourly.Rate, Department) %>% 
+  tibble::column_to_rownames("Department")
+
+# k factors computation
+fviz_nbclust(dept_clust, kmeans, method = "wss") # compute # of optimal clusters
+fviz_nbclust(dept_clust, kmeans, method = "silhouette") # cpt based on silhouette
+gap_stat = clusGap(dept_clust, FUN = kmeans, nstart = 25, K.max = 10, B = 50) #montecarlo simulation for gap stats
+fviz_gap_stat(gap_stat)
+k2 <- kmeans(dept_clust, centers = 3,nstart = 25) # 4 clusters and 20 steps
+fviz_cluster(k2, data = dept_clust) # initial plot
+
+
+# better scatter plot 
+scatter=sea_dem %>% 
+  dplyr::distinct(Department, .keep_all = T) %>% 
+  dplyr::select(Age, Hourly.Rate, Department) %>% 
+  column_to_rownames("Department") %>% 
+  dplyr::mutate(cluster = k2$cluster,
+         labels = row.names(dept_clust)) 
+
+
+#theming conventions
+t1=labs(y="",x="",title=expression(paste(bold("Potential Wage by Office at City of Seattle"))),subtitle="Cluster analysis aids in identifying similarities\nin wage distribution across age and office\n")
+c1=theme(text=element_text(size=18,family="Palatino Linotype"),axis.ticks = element_blank(),panel.grid.major.y = element_line(color='gray', size =  .3, linetype = "dotted"), panel.grid.minor.y = element_blank(), panel.grid.major.x =element_line(color='gray', size =  .3, linetype = "dotted"),panel.grid.minor.x = element_blank(),panel.border=element_blank(),axis.text= element_text(color="black", size = 15),legend.key = element_blank(),panel.background = element_blank(),axis.text.y = element_text(margin=margin(0,-18,0,0)),legend.justification = "left", legend.position = "top")  
+
+
+sea_cluster=ggplot(scatter, aes(Age, Hourly.Rate, color = factor(cluster),label = labels))+t1+c1+
+  geom_point(size=0.20)+ 
+  geom_text_repel(aes(label=str_wrap(labels,10)),segment.alpha=0.2,
+                                         family = 'Palatino Linotype',
+                                         box.padding = 0.30)+
+  scale_y_continuous(breaks = seq(0,90,30), limits = c(0,90), labels = c(0,30,60,"$90 / hour"))+
+  scale_x_continuous(breaks = seq(15,80,5), limits = c(15,80), labels= c("Age",seq(20,80,5)))
+
+  
+footnote= expression(paste(bold("Source: \n"),"Public data available at City of Seattle Staff Demographics site.\nwilberth@wisdomanalytics.net"))			
+
+one=ggplotGrob(sea_cluster)
+one=gtable_add_rows(one, heights = unit(1, "cm"))
+one=gtable_add_grob(one, imagen, nrow(one), 1, nrow(one), ncol(one))
+g=arrangeGrob(one, bottom = textGrob(footnote, x = 0.05, hjust = 0, vjust=-0.7, gp = gpar(fontface = "italic", fontsize = 9.5, fontfamily="Georgia")))
+ggsave("sea_cluster.png", g, dpi=500,width = 11,height = 9)
+  
+# not run  point.padding = unit(0.45, "lines"),
+
+# stats by cluster
+scatter %>% 
+  group_by(cluster) %>%
+  summarise_all("mean")
+cluster   Age     Hourly.Rate 
+ 1        30.9        38.6    Red
+ 2        54.6        32.2    Green
+ 3        55.3        60.5    Blue
+ 
+ 
