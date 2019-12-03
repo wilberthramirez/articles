@@ -73,13 +73,12 @@ sea_cluster=ggplot(scatter, aes(Age, Hourly.Rate, color = factor(cluster),label 
   
 footnote= expression(paste(bold("Source: \n"),"Public data available at City of Seattle Staff Demographics site.\nwilberth@wisdomanalytics.net"))			
 
+# adding branding and footnote
 one=ggplotGrob(sea_cluster)
 one=gtable_add_rows(one, heights = unit(1, "cm"))
 one=gtable_add_grob(one, imagen, nrow(one), 1, nrow(one), ncol(one))
 g=arrangeGrob(one, bottom = textGrob(footnote, x = 0.05, hjust = 0, vjust=-0.7, gp = gpar(fontface = "italic", fontsize = 9.5, fontfamily="Georgia")))
 ggsave("sea_cluster.png", g, dpi=500,width = 11,height = 9)
-  
-# not run  point.padding = unit(0.45, "lines"),
 
 # stats by cluster
 scatter %>% 
