@@ -1,0 +1,151 @@
+# Forecasting customer traffic with Google Trends & Facebook's Prophet
+
+#LIBRARIES----
+library(fpp3)       # tidyverse and forecasting libraries
+library(gtrendsR)   # querying googgle trends
+library(lubridate)  # handling dates
+library(magrittr)   # additional piping operations
+library(scales)     # special axis transformations
+library(stringr)    # string handling
+
+
+
+
+# inspecting the gtrends output for selection
+names(google.trends)
+[1] "interest_over_time"  "interest_by_country" "interest_by_region"  "interest_by_dma"    
+[5] "interest_by_city"    "related_topics"      "related_queries" 
+
+#setting the query
+
+## TRENDS SECTION----
+# a google search for elections 2020 yield this rankings on sab 15th
+key_terms=c("Pete Buttigieg",
+            "bernie sanders", 
+            "elizabeth warren",
+            "Amy Klobuchar",
+            "Joe Biden") # must be two or more, otherwise select fails
+
+# Original Data----
+
+trends_df = gtrends(key_terms, 
+                      geo   = c("US"), # inserting WA to specify state 
+                      gprop = "web", 
+                      time = "2017-01-01 2020-01-31")[[1]] %>% # start & end dates. 1 is to select "interest over time"
+                      dplyr::select(date, hits, keyword) %>% 
+                      mutate_at(vars(keyword),~str_to_title(.)) %>%  # Sets case to its values
+                      mutate_at(vars(date), ~as.POSIXct(.)) # required for new scales 1.1.0 pkg
+
+#TRANSFORMATION ----
+tx_trends <- trends_df %>%
+  mutate_at(vars(hits), ~ as.numeric(str_remove(., "<"))) %>%
+  group_by(date = floor_date(date, "month"), keyword) %>%
+  summarise(hits = sum(hits)) %>% 
+  ungroup() 
+   
+#FORECASTING SECTION ----
+
+#DECLARATION ----
+set_for_modeling <- tx_trends %>% mutate(date = yearmonth(date)) %>% # assuming date class
+  as_tsibble(index = date, key = keyword) # keyword in from my google case, otherwise no grouping
+
+# Exploration of Gaps
+has_gaps(set_for_modeling, .full = F) #checks for either gaps within dates or entire (TRUE) dataset
+
+
+# Application of transformations (if needed) or and guerrero wants to be tried out
+lambda_estimate <- set_for_modeling %>% #extract Box Cox's lambda
+  features(hits, features = guerrero) %>%
+  pull(lambda_guerrero)
+
+#2. MODELING ----
+models_set <- set_for_modeling %>%
+  model(ETS_log  = ETS(log(hits)),              # natural log
+        ETS_BoxCox  = ETS(box_cox(hits, 0.30)), # power transformation 
+        Seasonal_Naive = SNAIVE(hits),
+        Drift          = RW(hits ~ drift()),
+        Mean           = MEAN(hits))
+
+#3. MODEL DETAILS ----
+
+models_set %>% coef()     # Statistics
+models_set %>% glance()   # Quality Measures
+models_set %>% accuracy() # Accuracy Measures
+models_set %>% select(Smoothing Model) %>% report() # Single Model Smoothing Parameters
+models_set %>% augment()  # Actuals vs Fitted
+
+#Visualization Actuals vs Fitted
+models_set %>%
+  augment() %>%
+  filter(.model == "ETS_BoxCox") %>% 
+  select(keyword, hits, date, .fitted) %>%
+  ggplot(., aes(date))+
+  geom_line(aes(y = hits, color = "Actuals")) +
+  geom_line(aes(y = .fitted, color = "Fitted"))+
+  facet_grid(keyword~., scales = "free_y", labeller = labeller(keyword = label_wrap_gen(10)))
+  
+
+
+#4. FORECAST ----
+fcast_set <- models_set %>%
+  forecast(h=9)
+# %>% hilo() for prediction intervals (must be removed for autoplotting)
+#include only if desired
+
+#5. VISUALS ----
+# All models
+fcast_set %>% autoplot(set_for_modeling, level=NULL)
+
+#Selected Model Example
+fcast_set %>%
+  filter(.model=="ETS_log") %>%
+  autoplot(set_for_modeling, level = NULL)
+
+# Best Models (When grouped)
+models_set %>% accuracy() %>%
+  group_by(keyword, .model) %>% 
+  summarise(Min_Mape = min(MAPE, na.rm = T)) %>% 
+  filter(Min_Mape==min(Min_Mape)) %>%
+  arrange(Min_Mape) %>% 
+  ungroup() %>% 
+  mutate(Fcast_Avg = mean(Min_Mape)) 
+
+#All together (actuals, fitted & forecast) 
+
+flat_fcast_example <- models_set %>% # flat-liner visual
+  augment() %>%
+  filter(.model == "ETS_log") %>% 
+  ggplot(aes(x = date))+scale_x_date(date_labels = "'%y")+
+  geom_line(aes(y = hits, color = "Actuals")) +
+  geom_line(aes(y = .fitted, color = "Fitted")) +
+  geom_line(data = fcast_set %>% as_tibble() %>% filter(.model == "ETS_log") %>% select(date, hits, keyword),aes(date, hits, color = "Forecast"), linetype="dashed")+guides(color=guide_legend("Exponential\nSmoothing Model"))+
+  facet_wrap(.~keyword, ncol = 1, nrow = 5) +
+  # facet_grid_sc(rows = vars(keyword), scales = list(y = scales_y)) +
+  my_theme+labs(x="",y="") 
+
+wiggly_fcast_example <- models_set %>%
+  augment() %>%
+  filter(.model == "Seasonal_Naive") %>%
+  as_tibble() %>% 
+  ggplot(aes(x = date))+ scale_x_date(date_labels = "'%y")+
+  geom_line(aes(y = hits, color = "Actuals")) +
+  geom_line(aes(y = .fitted, color = "Fitted")) +
+  geom_line(data = fcast_set %>% as_tibble() %>% filter(.model == "Seasonal_Naive") %>% select(date, hits, keyword),aes(date, hits, color = "Forecast"), linetype="dashed")+guides(color=guide_legend("Seasonal\nNaïve Model"))+
+  facet_wrap(.~keyword, ncol = 1, nrow = 5)+my_theme+labs(x="",y="")
+
+
+# Writing the visuals
+title=textGrob("Forecasting Presidential Candidates Popularity\n", gp=gpar(fontface="bold",fontsize = 16, fontfamily="Georgia"))
+footnote <- expression(paste(bold("Note: \n"),"Interest-over-time index data of google web searches extracted on Sunday, Feb 16th 2020.\nwilberth@wisdomanalytics.net"))
+
+one=ggplotGrob(flat_fcast_example)
+one=gtable_add_rows(one, heights = unit(1, "cm"))
+
+two=ggplotGrob(wiggly_fcast_example)
+two=gtable_add_rows(two, heights = unit(1, "cm"))
+two=gtable_add_grob(two, imagen, nrow(two), 1, nrow(two), ncol(two))
+
+g=arrangeGrob(grid.arrange(one, two, ncol= 2),top = title, bottom = textGrob(footnote, x = 0.05, hjust = 0, vjust=-0.7, gp = gpar(fontface = "italic", fontsize = 9.5, fontfamily="Georgia")))
+
+ggsave("final_article_plot.png", g , dpi=500,width = 13,height = 7)
+
