@@ -60,8 +60,8 @@ lambda_estimate <- set_for_modeling %>% #extract Box Cox's lambda
 
 #2. MODELING ----
 models_set <- set_for_modeling %>%
-  model(ETS_log  = ETS(log(hits)),              # natural log
-        ETS_BoxCox  = ETS(box_cox(hits, 0.30)), # power transformation 
+  model(ETS_log        = ETS(log(hits)),              # natural log
+        ETS_BoxCox     = ETS(box_cox(hits, 0.30)), # power transformation 
         Seasonal_Naive = SNAIVE(hits),
         Drift          = RW(hits ~ drift()),
         Mean           = MEAN(hits))
@@ -118,7 +118,10 @@ flat_fcast_example <- models_set %>% # flat-liner visual
   ggplot(aes(x = date))+scale_x_date(date_labels = "'%y")+
   geom_line(aes(y = hits, color = "Actuals")) +
   geom_line(aes(y = .fitted, color = "Fitted")) +
-  geom_line(data = fcast_set %>% as_tibble() %>% filter(.model == "ETS_log") %>% select(date, hits, keyword),aes(date, hits, color = "Forecast"), linetype="dashed")+guides(color=guide_legend("Exponential\nSmoothing Model"))+
+  geom_line(data = fcast_set %>% as_tibble() %>% 
+  filter(.model == "ETS_log") %>% 
+  select(date, hits, keyword),aes(date, hits, color = "Forecast"), linetype="dashed")+
+  guides(color=guide_legend("Exponential\nSmoothing Model"))+
   facet_wrap(.~keyword, ncol = 1, nrow = 5) +
   # facet_grid_sc(rows = vars(keyword), scales = list(y = scales_y)) +
   my_theme+labs(x="",y="") 
@@ -130,7 +133,10 @@ wiggly_fcast_example <- models_set %>%
   ggplot(aes(x = date))+ scale_x_date(date_labels = "'%y")+
   geom_line(aes(y = hits, color = "Actuals")) +
   geom_line(aes(y = .fitted, color = "Fitted")) +
-  geom_line(data = fcast_set %>% as_tibble() %>% filter(.model == "Seasonal_Naive") %>% select(date, hits, keyword),aes(date, hits, color = "Forecast"), linetype="dashed")+guides(color=guide_legend("Seasonal\nNaïve Model"))+
+  geom_line(data = fcast_set %>% as_tibble() %>% 
+  filter(.model == "Seasonal_Naive") %>% 
+  select(date, hits, keyword),aes(date, hits, color = "Forecast"), linetype="dashed")+
+  guides(color=guide_legend("Seasonal\nNaïve Model"))+
   facet_wrap(.~keyword, ncol = 1, nrow = 5)+my_theme+labs(x="",y="")
 
 
@@ -145,7 +151,10 @@ two=ggplotGrob(wiggly_fcast_example)
 two=gtable_add_rows(two, heights = unit(1, "cm"))
 two=gtable_add_grob(two, imagen, nrow(two), 1, nrow(two), ncol(two))
 
-g=arrangeGrob(grid.arrange(one, two, ncol= 2),top = title, bottom = textGrob(footnote, x = 0.05, hjust = 0, vjust=-0.7, gp = gpar(fontface = "italic", fontsize = 9.5, fontfamily="Georgia")))
+g=arrangeGrob(grid.arrange(one, two, ncol= 2),top = title, 
+                           bottom = textGrob(footnote, x = 0.05, 
+                           hjust = 0, vjust=-0.7, 
+                           gp = gpar(fontface = "italic", fontsize = 9.5, fontfamily="Georgia")))
 
 ggsave("final_article_plot.png", g , dpi=500,width = 13,height = 7)
 
