@@ -33,7 +33,7 @@ sea_dem = sea_dem %>%
 
 
 #clustering by department 
-dept_clust = sea_dem %>% 
+dept_clust <- sea_dem %>% 
   dplyr::mutate_if(is.numeric,~scale(.)) %>%
   dplyr::distinct(Department, .keep_all = T) %>% 
   dplyr::select(Age, Hourly.Rate, Department) %>% 
