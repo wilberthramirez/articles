@@ -1,1 +1,604 @@
-# this is the beginning
+---
+title: "**Wilberth A. Ramirez**  | Columbia, SC | 206-200-0947  \nwilberth@post.harvard.edu  | \n[LinkedIn](https://www.linkedin.com/in/wilberthramirez/)  | [Twitter](https://twitter.com/wilberth_crc)  | [Github](https://github.com/wilberthramirez/articles)"
+format: pdf
+pdf-engine: xelatex
+linkcolor: blue
+urlcolor: blue
+geometry:
+  - top=10mm
+  - left=20mm
+editor: visual
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{flushright}} 
+  - \posttitle{\end{flushright}}
+  - \thispagestyle{empty}
+  - \pagenumbering{gobble}
+  - \usepackage{fvextra}
+  - \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+
+fontsize: 12pt
+mainfont: "Palatino"
+execute:
+  eval: false
+  warning: false
+---
+
+#1. LIBRARIES
+
+```{r}
+#| warning: false
+if (!require("pacman")) install.packages("pacman")
+# if (!require("ggwaffle")) install.packages("waffle", repos = "https://cinc.rud.is")
+# if(!require(ggwaffle)) devtools::install_github("liamgilbey/ggwaffle")
+# if(!require(stringr.plus)) remotes::install_github("johncassil/stringr.plus")
+
+
+p_load(
+ # Data manipulation & Friends
+ plyr, tidyverse, janitor, magrittr, vroom, stringr.plus, glue, stringi, janitor,
+ # Time manipulation
+ lubridate, anytime,
+ # External sources
+ googlesheets4, 
+ # Project management
+ here,
+ # ggplot, Tables & Friends
+ ggtext, scales, ggwaffle,waffle,ggwaffle,magick, grid, gridExtra, gtable,
+ patchwork, extrafont,tidytext, viridis, ggrepel,cowplot, ggalt,gt,ggimage, gtExtras,gt, gtExtras, webshot2,
+ # Machine Learning
+ # tidymodels,keras, LiblineaR, ranger, vip, xgboost, themis, vip,
+ # Web manipulation
+ rvest,
+ # Typography
+ sysfonts, showtext,extrafont, extrafontdb, fontawesome,
+ # Miscellaneous
+ quarto, rmarkdown, gtrendsR, instaR, ggimage, ChannelAttribution)
+```
+
+#2. FORMAT
+
+# Fonts
+
+## System
+
+```{r}
+# main_font <- "Avenir Medium"
+# sec_font  <- "Palatino"
+# channels <- "channels"
+```
+
+## Imported
+
+```{r}
+# if not on Google 
+font_add("main_font", regular = paste0(here("hallmark"),"/Channel_Slanted1.ttf"))
+# For icons (Fontawesome)
+font_add("fa-channels", regular = paste0(here("hallmark"),"/fa-brands-400.ttf")) 
+# if on Google
+font_add_google("Spectral","sec_font")
+
+showtext_auto()
+# adjust dpi within showtext to address saving issue with showtext + ggtext problem
+showtext_opts(dpi = 300) 
+# I assign the pulled names to a variable, so then glue can acknowledge, otherwise 
+# if must be typed
+main_font    <- "main_font"
+sec_font     <- "sec_font"
+font_awesome <- "fa-channels"
+```
+
+## Icons
+
+```{r}
+
+twitter <- "<span style='font-family:{font_awesome};color:blue'>&#xf099;</span>"
+github  <- "<span style='font-family:{font_awesome};color:{icon_color}'>&#xf09b;</span>"
+twitter <- "<span style='font-family:{font_awesome};color:{icon_color}'>&#xf099;</span>"
+
+```
+
+# Colors
+
+```{r}
+
+pri_color   <- "#613790"
+sec_color   <- "#8D45A6"
+red         <- "#E41C2B" 
+icon_color  <- "#000000"
+# The code below is a function that when called, you feed a number. It becomes the # of tonalites
+# from pri_color to white, like so: artificial_gradient(5) (five tonalities)
+artificial_gradient <- colorRampPalette(c(pri_color, "white"))
+```
+
+# Logo
+
+```{r}
+logo_from_web <- "https://www.civisanalytics.com/wp-content/uploads/2021/12/civis-analytics-logo-ForLightBG-1.svg"
+
+
+logo_pic <- image_read(here("hallmark/visuals","HMKcsmr_Standard_Plum.jpg"))
+
+logo     <- image_read(here("hallmark/visuals","HMKcsmr_Standard_Plum.jpg")) %>% # if read locally
+            # image_read(logo_from_web) %>% # If read from URL
+            rasterGrob(.,width = unit(2,"cm"),x=1, hjust = 1.6) %>%
+            # bottom was 0.1, but changed it to 0 for the waffle and added clip
+            inset_element(., 0.8, 0.1, 1, 0, align_to = 'full', clip = FALSE) 
+
+save_visual <- function(plot_name){
+               p <- last_plot() + logo
+               ggsave(here("hallmark/visuals",paste0(plot_name,".png")), plot = p,
+               height=7, width = 11, unit="in")}
+
+# Then feed just feed it to
+save_visual("plot_name")
+
+```
+
+# Social Caption
+
+```{r}
+# if we you don't need an icon, set it to NA. It will be picked up by the function
+social_caption <- function(twitter    =" @wilberth_crc",
+                           github     = " wilberthramirez",
+                           linkedin   =" wilberthramirez",
+                           icon_color = pri_color,
+                           font_color = "black",
+                           bg_color   ="red",
+                           font_family= sec_font){
+  
+  icons  = list(twitter = "&#xf099", github = "&#xf09b", linkedin = "&#xf08c") 
+  social = list(twitter = twitter, github = github, linkedin = linkedin)
+  social = social[!is.na(social)]
+  
+  caption = ""
+  for (name in names(social)){
+    icon = icons[name]
+    info = social[name]
+    html = glue("<span style='font-family:{font_awesome};color:{icon_color};'>{icon};</span><span style='color:{bg_color};'>.</span><span style='font-family:{font_family};color:{font_color};'>{info}</span><span style='color:{bg_color};'>..</span>")
+    caption = paste0(caption,html)}
+    caption}
+```
+
+# Themes
+
+## ggplot
+
+```{r}
+my_theme <- theme(
+# Panel settings
+panel.border = element_blank(),
+panel.background = element_blank(),
+panel.spacing = unit(2, "lines"),
+# Facet settings
+strip.background = element_rect(color = "white", fill = "white"),
+strip.text = element_text(size = 13.5, family = main_font),
+#Ticks --
+axis.ticks        = element_line(color = "grey92"),
+axis.text         = element_text(size = 15, family = sec_font, colour = pri_color),
+axis.ticks.length = unit(.5, "lines"),
+# Grid lines --
+panel.grid.minor   = element_blank(),
+panel.grid.major.x = element_blank(),
+panel.grid.major.y = element_line(linetype = "dotted", color = "white"),
+#Legends --
+legend.title  = element_text(size = 12),
+legend.text   = element_text(color = "grey30"),
+#Titleing --
+plot.title    = element_markdown(size  = 18, family = main_font, color = pri_color),
+plot.subtitle = element_markdown(size  = 15, family = sec_font, lineheight = 1.15, color = sec_color),
+plot.caption  = element_markdown(hjust = 0,  size   = 14, lineheight = 1.4, color = pri_color),
+plot.caption.position = "plot",
+plot.title.position   = "plot",
+# Margins ---
+plot.margin = margin(25, 25, 10, 25)
+)
+```
+
+## g Tables
+
+```{r}
+gt_theme <- function(data) {
+    
+    tab_options(
+        data = data,
+        heading.align = "left",
+        column_labels.font.weight = "bold",
+        # table_body.hlines.color = "red", # column horizontal lines
+        # Borders ---
+        # Header -
+        heading.border.bottom.color = "white",
+        heading.border.bottom.width = px(1),
+    
+        # Table -
+        table.border.top.color = "transparent",
+        table.border.bottom.color = "transparent", # last horizontal line before notes
+        table.border.top.width = px(2),
+        table.border.bottom.width = px(1),
+        table_body.hlines.color = "white",
+        table_body.border.bottom.color = pri_color,
+        table_body.border.bottom.width = px(1),
+        # Cols -
+        column_labels.border.top.color = pri_color,
+        column_labels.border.bottom.color = pri_color,
+        column_labels.border.top.width = px(1),
+        column_labels.border.bottom.width = px(1),
+        table.font.size = 17,
+        heading.title.font.size = 20,
+        heading.subtitle.font.size = 15,
+        # table.font.names = main_font, 
+        # Source Formatting
+         source_notes.font.size = 15,
+        data_row.padding = px(10))
+    # Padding: Rows, cols and header
+        # data_row.padding = px(15), 
+        # column_labels.padding = px(15), 
+        # heading.padding = px(15)) 
+    
+    }
+```
+
+# Presets
+```{r}
+space <- "<span style = 'color: white;'>.</span>"
+```
+
+## Titleing
+
+```{r}
+labs(x = "", y = "",
+    title = glue::glue("<span style='color:{pri_color}'>Title goes here</span>"),
+    subtitle = glue::glue("This is the start <span style='color:{pri_color}'>of your</span> subtitle"),
+    caption = glue::glue("<strong style='font-family:{sec_font}; color:{pri_color}'>Source & Notes:</strong> <span style = 'font-family: {sec_font}'>HubSpot-provided data. Excludes 10.6% (532 observations) from non-customers without a defined employee range.</span><br><strong style = 'color: {pri_color};font-family: {sec_font};'>Wilberth Ramirez</strong> | ",
+                 social_caption(icon_color ="#1DB954", bg_color="black", font_color = "#D7DDDD",
+                                font_family= sec_font)))
+```
+
+## Axis
+
+```{r}
+# X AXIS --
+# Must transform the col using as.POSIXct, like so: mutate(across(Date, ~ as.POSIXct(.)))
+scale_x_datetime(labels = label_date_short(format = c(format = c("'%y", "%b"), sep = "\n")))
+scale_x_continuous(labels = function(x) paste0("Q", x)) 
+
+
+# Y AXIS --
+
+scale_y_continuous(breaks = seq(0, 350, by = 50), limits = c(0, 360), 
+                   position = "right",
+                   labels = function(x) ifelse(x == 350, paste(x, "Millions"), paste(x)))
+
+scale_y_continuous(labels = function(x) ifelse(x == 1e3, paste(scales::comma(x), "secs"), paste(x)))
+scale_y_continuous(labels = function(x){ifelse(x == 1, paste0(x*100,"%"),x*100)})
+```
+
+#1. DATA
+
+# Google Trends
+
+```{r}
+search_terms <- paste0("hallmark ",c("greeting cards", "valentine cards"))
+search_terms <- c("hallmark valentine cards") # Could add more if you like
+
+card_trends <- gtrends(search_terms, 
+                       geo   = c("US"),
+                       gprop = "web", 
+                       # start & end dates. 1 is to select "interest over time"
+                       time = "2019-01-01 2023-02-28")[[1]] %>% 
+                       dplyr::select(date, hits, keyword) %>% 
+                       mutate(across(date, ~ as.POSIXct(.)),
+                              across(hits, ~ as.numeric(str_remove(., "<")))) %>% 
+                       filter(hits >= 0) 
+```
+
+# Hallmark
+
+## A. Prices
+
+```{r}
+# Get prices for products sold by searching valentine on hallmark's website
+valentine_url <- "https://www.hallmark.com/search?q=valentine%27s&oq=valentine%27s&sort=sale_price+desc"
+
+prices_on_valentine <- valentine_url %>% 
+                       read_html() %>% 
+                       html_nodes(".browse-tile-price") %>%
+                       html_text2() %>% # "Product price of USD 20.00 $20.00"! But we just wanted the price :( !!
+                       parse_number()   # Let's clean that with parse_number() :)
+
+```
+
+## B. Valentine's Dataset
+
+```{r}
+n <- 5e4 # No. of records
+# Function to generate fields/columns (avoids unnecessary typing/less verbose)
+generate <- function(x){sample(x, n, replace = T)}
+
+
+sf_ids        <- paste0("hmk",stri_rand_strings(n, 15))          # Salesforce IDs
+prev_30_days  <- seq(today()-30, by = "day", length.out = 30)    # Last 30 days
+channels      <- c("Tiktok", "Instagram", "Twitter", "Facebook", "MailChimp", "Pinterest") # Digital channels
+conversion    <- c(0,1) # Whether the customer purchased or not. 0 no, 1 yes.
+fields        <- list(sf_ids, prev_30_days, conversion) # Let's put them together in a list
+
+# Main dataset
+love_data <- map_dfc(fields, ~ bind_cols(generate(.))) %>% 
+             set_names(c("SFID","event_date","converted")) %>%
+             mutate(digital_channel = sample(channels, n, 
+                                             # dummy probabilities
+                                             prob = c(0.10, 0.33, 0.07, 0.18, 0.22,0.10), 
+                                             replace = T), .after = event_date) %>% 
+             rowwise() %>% 
+             mutate(sale_amount = case_when(converted == 0 ~ 0, # 
+                                            # one purchase per closed transaction 
+                                            TRUE ~ sample(prices_on_valentine, 1, replace = T))) %>% 
+             ungroup()
+
+```
+
+##C. Customer Journey
+
+```{r}
+cx_journey <- love_data %>%
+                summarise(path = paste(digital_channel, collapse = " > " ),
+                          conversion = sum(converted),
+                          conversion_value = sum(sale_amount), .by = SFID) %>%  # As of new dplyr's in-line grouping 
+                select(-SFID)
+```
+
+#2. MODELS
+
+## 2.1 Heuristic
+
+```{r}
+# Apply models
+h_model <- heuristic_models(cx_journey,
+                            var_path = "path",
+                            var_conv = "conversion",
+                            var_value = "conversion_value") %>% 
+           rename_with(~ paste0(c("conversions_","revenue_"), 
+                                rep(c("first", "last", "linear"),  each = 2)), 2:last_col()) 
+```
+
+## 2.2 Markov
+
+```{r}
+m_model <- markov_model(cx_journey,
+                        var_path = "path",
+                        var_conv = "conversion",
+                        var_value = "conversion_value",
+                        # var_null = None, as "conversion value" transformed
+                        out_more = TRUE)$result %>% 
+    rename_with(~ paste0(c("conversions_","revenue_"), "markov"), 2:last_col()) 
+```
+
+## 2.3 Dual-Model Set
+
+```{r}
+channel_colors <- paste0("#",c("0DEAE3", "C43E85", "1E96E8", "1973EB", "000000", "B7091B"))
+channel_specs  <- tibble(channel_name = channels, channel_colors)
+
+"#0DEAE3"
+set.seed(123)
+merged_models <- 
+                 plyr::join_all(list(h_model, m_model), type = "left") %>%
+                 mutate(channel = str_to_lower(channel_name), .before = channel_name,
+                        spend = runif(6, min = 100e3, 400e3),
+                        across(where(is.numeric), ~ round(.))) %>% 
+                 select(channel, spend, channel_name, 
+                        starts_with("conversions"), everything())
+
+
+# Not creating a function because it's only two times I am using it.
+# CPAs
+cpas <- merged_models %>% 
+        select(channel, spend, contains("conv")) %>% 
+        pivot_longer(-c(channel, spend)) %>% 
+        rowwise() %>% 
+        mutate(cpa = round(spend/value,1)) %>% 
+        pivot_wider(names_from = name,
+                    names_glue = "{name}_{.value}",
+                    values_from = c(value,cpa)) %>% 
+        select(channel, ends_with("_cpa")) %>% 
+        rename_with(~ str_remove(., "conversions_"), starts_with("conversions_"))
+
+ind_gross_margins <- 
+        merged_models %>% 
+        select(channel, spend, contains("rev")) %>% 
+        pivot_longer(-c(channel, spend)) %>% 
+        rowwise() %>% 
+        mutate(igm = round((value-spend)/value,2)) %>% 
+        pivot_wider(names_from = name,
+                    names_glue = "{name}_{.value}",
+                    values_from = c(value,igm)) %>%
+        select(channel, ends_with("_igm")) %>% 
+        rowwise() %>% 
+        mutate(agv_ind_gross = mean(c_across(where(is.numeric)))) %>% 
+        ungroup() %>% 
+        rename_with(~ str_remove(., "conversions_"), starts_with("conversions_"))
+    
+
+
+final_table_dataset <-  plyr::join_all(list(merged_models, cpas, 
+                                           ind_gross_margins, channel_specs), type = "left") %>% 
+                        select(where(is.character), everything()) %>% 
+                            arrange(-agv_ind_gross) %>% 
+                        rename("Avg. Gross Margin" = agv_ind_gross)
+
+
+
+
+
+
+
+```
+
+#3. TABLE
+
+```{r}
+
+    final_table_dataset %>% select(-c(2:3)) %>% 
+         gt() %>% 
+        gt_theme() %>%
+             cols_label(
+                        conversions_first = gt::html("First"),
+                        conversions_last = gt::html("Last"),
+                        conversions_linear = gt::html("Linear"),
+                        conversions_markov = gt::html("Markov"),
+                        revenue_first = gt::html("First"),
+                        revenue_last = gt::html("Last"),
+                        revenue_linear = gt::html("Linear"),
+                        revenue_markov = gt::html("Markov")
+                        ) %>%
+        gt_fa_column(channel, align = "center", 
+                     palette = final_table_dataset$channel_colors, height = "30px") %>%
+        tab_spanner(columns = 3:6, label =  gt::html("CONVERSIONS<br><span style = 'font-weight:bold;font-size: 13px;color:#4F4F4F'>(CPA, USD)</span><br>")) %>% 
+            tab_spanner(columns = 7:10, label =  gt::html("REVENUE<br><span style = 'font-weight:bold;font-size: 13px;color:#4F4F4F'>(Individual Gross Margin, %)</span><br>")) %>% 
+
+        #Letterhead ---
+          gt::tab_header(
+        title = html("<div style='float: left;padding:10px;'>",
+          web_image("https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Hallmark_logo.svg/400px-Hallmark_logo.svg.png",height = 50),
+          "</div>",
+          "<div style='padding:15px;'>",
+          glue::glue("<strong style='font-family:{main_font}; color:{pri_color}; padding-left: 10px'>Campaign Performance Across Online Channels</strong>"),
+          "<br>",
+          glue::glue("<span style='font-family:{main_font};color:{pri_color}; padding-left: 10px'>Multi-channel attribution with rule-based (heuristic) and Markov (data-driven) models</span>"),
+          "<div>")) %>% 
+        #Formatting
+        # Table
+        opt_all_caps() %>% 
+        opt_row_striping() %>% 
+        opt_table_font(font = google_font("Spectral")) %>% 
+         #Columns
+        cols_align(columns = everything(), align = "center") %>% 
+        cols_label(`Avg. Gross Margin` = gt::html("Avg. Gross<br>Margin")) %>% 
+    
+        # Number formatting ---
+        # fmt_missing(columns = 2:last_col(), missing_text = "") %>%
+        fmt_currency(columns = c(2,7:10), rows = 1, decimals = 1, currency = "USD",
+                     suffixing = TRUE) %>%
+        fmt_currency(columns = c(11:14), 
+                     # rows = 1, 
+                     decimals = 1, currency = "USD",
+                     suffixing = TRUE) %>%
+    
+        fmt_number(columns = c(2,7:10), rows = 2:nrow(final_table_dataset), 
+                     decimals = 1, scale_by = 1e-3) %>% 
+        fmt_number(columns = 3:6, decimals = 0) %>% 
+        fmt_percent(columns = 15:last_col(), decimals = 1) %>% 
+        # Merging of CPAs
+        cols_merge(columns = c(3, 11)) %>% 
+        cols_merge(columns = c(4, 12)) %>% 
+        cols_merge(columns = c(5, 13)) %>% 
+        cols_merge(columns = c(6, 14)) %>% 
+        # Merging of individual gross margins
+        cols_merge(columns = c(7, 15)) %>% 
+        cols_merge(columns = c(8, 16)) %>% 
+        cols_merge(columns = c(9, 17)) %>% 
+        cols_merge(columns = c(10, 18)) %>% 
+        # Function to format the merging of numeric cols
+          text_transform(
+            locations = cells_body(columns = 3:6),
+                       fn = function(x){
+                           top_column <- word(x, 1)
+                           bottom_colum <- word(x, -1)
+                           glue::glue(
+                               "<div><span>{top_column}</div>
+            <div><span style ='font-weight:bold;color:#4F4F4F;font-size:14px;text-align:center;'>{bottom_colum}</span></div>")}) %>% 
+            # Function to format the merging of numeric cols
+          text_transform(
+            locations = cells_body(columns = 7:10),
+                       fn = function(x){
+                           top_column <- word(x, 1)
+                           bottom_colum <- word(x, -1)
+                           glue::glue(
+                               "<div><span>{top_column}</div>
+            <div><span style ='font-weight:bold;color:#4F4F4F;font-size:14px;text-align:center;'>{bottom_colum}</span></div>")}) %>% 
+        # Gradient Coloring (this goes from chosen color to white)
+        data_color(columns = last_col(),
+                   colors = scales::col_numeric(palette = c(pri_color,"white"),
+                                                domain = c(0,1), reverse = TRUE)) %>%
+        # Conditional Coloring
+        tab_style(
+        style = list(
+          cell_text(color = "red"),
+          cell_fill(color = "white")
+        ),
+        locations = cells_body(
+          columns = `Avg. Gross Margin`,
+          rows = `Avg. Gross Margin` < 0
+        )
+      ) %>% 
+          cols_width(3:last_col()-1 ~ px(100)) %>% 
+    # Source
+      tab_source_note(gt::html(glue::glue("<strong style='font-family:{sec_font}; color:{pri_color}'>Source & Notes:</strong> <span style = 'font-family: {sec_font}'>hallmark.com and simulated data for the previous 30 days | Extraction: 2023-03-05</span><br><strong style = 'color: {pri_color};font-family: {sec_font};'>Wilberth Ramirez</strong> | "), 
+                               gt::html(fontawesome::fa("twitter", fill = pri_color)), "@wilberth_crc",{space}, 
+                               gt::html(fontawesome::fa("github", fill = pri_color)),"wilberthramirez",{space},
+                               gt::html(fontawesome::fa("linkedin", fill = pri_color)),"wilberthramirez",
+    
+                               )) %>% 
+        gtsave_extra(.,here("hallmark/visuals","hallmark_table.png"), expand = 20)
+
+```
+
+
+#4. TRENDS
+```{r}
+# Textboxes
+box_title_font_size <- "15pt"
+box_flight = glue::glue("<span style = 'font-family:{sec_font}; font-size:{box_title_font_size}; color:{pri_color}'>**Flight Deployment:**<br></span><br><span style='font-size:14pt;font-family:{sec_font}; color:black'>The shaded areas suggest a proper window of six weeks prior to Valentine's, but the </span><span style='font-size:15pt;font-family:{sec_font}; color:{pri_color};'>**sweet spot**</span><span style='font-size:15pt;font-family:{sec_font}; color:black'> is on the last </span><span style='font-size:15pt;font-family:{sec_font}; color:{pri_color};'>**two weeks**</span>")
+
+
+
+web_searches <-
+    
+    card_trends %>% 
+        filter(keyword == "Hallmark Valentine Cards") %>% 
+    ggplot(aes(date, hits)) +
+               # color = keyword)) +
+    geom_line(color = sec_color) +
+    my_theme +
+    # Scales ---
+    scale_y_continuous(limits = c(0,101), breaks = seq(0,100, 25)) +
+         # Miscellaneaus 
+    theme(legend.position = "top",
+          panel.grid.major.y = element_line(linetype = "solid", color = sec_color, size = 0.03)) +
+        # Shading --
+    annotate("rect", xmin = c(as.POSIXct("2019-01-01"),as.POSIXct("2020-01-01"),
+                          as.POSIXct("2021-01-01"),as.POSIXct("2022-01-01"), as.POSIXct("2023-01-01")),
+                        xmax = c(as.POSIXct("2019-02-15"), as.POSIXct("2020-02-15"),
+                                 as.POSIXct("2021-02-15"), as.POSIXct("2022-02-15"), as.POSIXct("2023-02-15")),
+         ymin = rep(0,5), ymax = c(100,rep(75,4)), alpha = 0.2, fill = pri_color) +
+    # Curves --
+    geom_curve(aes(x=as.POSIXct("2019-01-25"), xend= as.POSIXct("2019-04-25"), 
+                   y = 75 ,yend = 85),curvature = -0.4,
+    arrow = arrow(length = unit(0.1,"cm")), color = pri_color, size = 0.4) +
+        # Text Box
+       ggtext::geom_textbox(data = tibble(x = as.POSIXct("2020-04-25"),y = 87, label = box_flight),
+    aes(x, y, label = label),size = 2.2, family = sec_font,
+    fill = NA, box.color = NA,
+    width = unit(20, "lines"), inherit.aes = F) +
+        
+        # Titleing --
+    labs(x = "", y = "",
+    title = glue::glue("<span style='color:{pri_color}'>When Do We Feel Romantic ?</span>"),
+    subtitle = glue::glue("<br><span style='color:{pri_color}'>Keyword searches for **Hallmark valentine cards** start early in January, but steadily increase <br>from President's Day up to this lovely celebration, then plateau<br>100 = highest interest over time</span>"),
+    caption = glue::glue("<strong style='font-family:{sec_font}; color:{pri_color}'>Source & Notes:</strong> <span style = 'font-family: {sec_font}'>Google Trends. U.S. only (2019-01-01 to 2023-02-28) | Extraction: 2023-03-05</span><br><strong style = 'color: {pri_color};font-family: {sec_font};'>Wilberth Ramirez</strong> | ",
+                 social_caption(icon_color = pri_color, bg_color="white", font_color = "black",
+                                font_family= sec_font)))
+
+
+
+save_visual("web_searches")
+
+
+```
+
+# SAVING
+
+```{r}
+#| eval: false
+quarto::quarto_render("hallmark.qmd")
+```
