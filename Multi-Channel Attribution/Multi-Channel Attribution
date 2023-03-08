@@ -114,7 +114,6 @@ artificial_gradient <- colorRampPalette(c(pri_color, "white"))
 # Logo
 
 ```{r}
-logo_from_web <- "https://www.civisanalytics.com/wp-content/uploads/2021/12/civis-analytics-logo-ForLightBG-1.svg"
 
 
 logo_pic <- image_read(here("hallmark/visuals","HMKcsmr_Standard_Plum.jpg"))
