@@ -121,7 +121,6 @@ logo_pic <- image_read(here("hallmark/visuals","HMKcsmr_Standard_Plum.jpg"))
 logo     <- image_read(here("hallmark/visuals","HMKcsmr_Standard_Plum.jpg")) %>% # if read locally
             # image_read(logo_from_web) %>% # If read from URL
             rasterGrob(.,width = unit(2,"cm"),x=1, hjust = 1.6) %>%
-            # bottom was 0.1, but changed it to 0 for the waffle and added clip
             inset_element(., 0.8, 0.1, 1, 0, align_to = 'full', clip = FALSE) 
 
 save_visual <- function(plot_name){
@@ -143,7 +142,7 @@ social_caption <- function(twitter    =" @wilberth_crc",
                            linkedin   =" wilberthramirez",
                            icon_color = pri_color,
                            font_color = "black",
-                           bg_color   ="red",
+                           bg_color   = "red",
                            font_family= sec_font){
   
   icons  = list(twitter = "&#xf099", github = "&#xf09b", linkedin = "&#xf08c") 
@@ -240,36 +239,6 @@ gt_theme <- function(data) {
 # Presets
 ```{r}
 space <- "<span style = 'color: white;'>.</span>"
-```
-
-## Titleing
-
-```{r}
-labs(x = "", y = "",
-    title = glue::glue("<span style='color:{pri_color}'>Title goes here</span>"),
-    subtitle = glue::glue("This is the start <span style='color:{pri_color}'>of your</span> subtitle"),
-    caption = glue::glue("<strong style='font-family:{sec_font}; color:{pri_color}'>Source & Notes:</strong> <span style = 'font-family: {sec_font}'>HubSpot-provided data. Excludes 10.6% (532 observations) from non-customers without a defined employee range.</span><br><strong style = 'color: {pri_color};font-family: {sec_font};'>Wilberth Ramirez</strong> | ",
-                 social_caption(icon_color ="#1DB954", bg_color="black", font_color = "#D7DDDD",
-                                font_family= sec_font)))
-```
-
-## Axis
-
-```{r}
-# X AXIS --
-# Must transform the col using as.POSIXct, like so: mutate(across(Date, ~ as.POSIXct(.)))
-scale_x_datetime(labels = label_date_short(format = c(format = c("'%y", "%b"), sep = "\n")))
-scale_x_continuous(labels = function(x) paste0("Q", x)) 
-
-
-# Y AXIS --
-
-scale_y_continuous(breaks = seq(0, 350, by = 50), limits = c(0, 360), 
-                   position = "right",
-                   labels = function(x) ifelse(x == 350, paste(x, "Millions"), paste(x)))
-
-scale_y_continuous(labels = function(x) ifelse(x == 1e3, paste(scales::comma(x), "secs"), paste(x)))
-scale_y_continuous(labels = function(x){ifelse(x == 1, paste0(x*100,"%"),x*100)})
 ```
 
 #1. DATA
