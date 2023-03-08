@@ -240,7 +240,6 @@ space <- "<span style = 'color: white;'>.</span>"
 # Google Trends
 
 ```{r}
-search_terms <- paste0("hallmark ",c("greeting cards", "valentine cards"))
 search_terms <- c("hallmark valentine cards") # Could add more if you like
 
 card_trends <- gtrends(search_terms, 
