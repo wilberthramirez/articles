@@ -46,8 +46,6 @@ p_load(
  # ggplot, Tables & Friends
  ggtext, scales, ggwaffle,waffle,ggwaffle,magick, grid, gridExtra, gtable,
  patchwork, extrafont,tidytext, viridis, ggrepel,cowplot, ggalt,gt,ggimage, gtExtras,gt, gtExtras, webshot2,
- # Machine Learning
- # tidymodels,keras, LiblineaR, ranger, vip, xgboost, themis, vip,
  # Web manipulation
  rvest,
  # Typography
