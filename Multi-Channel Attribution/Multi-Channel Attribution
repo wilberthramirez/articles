@@ -433,7 +433,6 @@ final_table_dataset <-  plyr::join_all(list(merged_models, cpas,
         cols_label(`Avg. Gross Margin` = gt::html("Avg. Gross<br>Margin")) %>% 
     
         # Number formatting ---
-        # fmt_missing(columns = 2:last_col(), missing_text = "") %>%
         fmt_currency(columns = c(2,7:10), rows = 1, decimals = 1, currency = "USD",
                      suffixing = TRUE) %>%
         fmt_currency(columns = c(11:14), 
