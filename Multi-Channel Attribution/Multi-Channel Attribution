@@ -29,14 +29,10 @@ execute:
 ```{r}
 #| warning: false
 if (!require("pacman")) install.packages("pacman")
-# if (!require("ggwaffle")) install.packages("waffle", repos = "https://cinc.rud.is")
-# if(!require(ggwaffle)) devtools::install_github("liamgilbey/ggwaffle")
-# if(!require(stringr.plus)) remotes::install_github("johncassil/stringr.plus")
-
 
 p_load(
  # Data manipulation & Friends
- plyr, tidyverse, janitor, magrittr, vroom, stringr.plus, glue, stringi, janitor,
+ plyr, tidyverse, janitor, magrittr, vroom,  glue, stringi, janitor,
  # Time manipulation
  lubridate, anytime,
  # External sources
