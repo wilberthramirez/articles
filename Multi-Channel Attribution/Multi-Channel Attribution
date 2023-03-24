@@ -54,14 +54,6 @@ p_load(
 
 # Fonts
 
-## System
-
-```{r}
-# main_font <- "Avenir Medium"
-# sec_font  <- "Palatino"
-# channels <- "channels"
-```
-
 ## Imported
 
 ```{r}
@@ -113,7 +105,6 @@ artificial_gradient <- colorRampPalette(c(pri_color, "white"))
 logo_pic <- image_read(here("hallmark/visuals","HMKcsmr_Standard_Plum.jpg"))
 
 logo     <- image_read(here("hallmark/visuals","HMKcsmr_Standard_Plum.jpg")) %>% # if read locally
-            # image_read(logo_from_web) %>% # If read from URL
             rasterGrob(.,width = unit(2,"cm"),x=1, hjust = 1.6) %>%
             inset_element(., 0.8, 0.1, 1, 0, align_to = 'full', clip = FALSE) 
 
