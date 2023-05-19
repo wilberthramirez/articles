@@ -121,7 +121,7 @@ save_visual("plot_name")
 # Social Caption
 
 ```{r}
-# if we you don't need an icon, set it to NA. It will be picked up by the function
+# if you don't need an icon, set it to NA. It will be picked up by the function
 social_caption <- function(twitter    =" @wilberth_crc",
                            github     = " wilberthramirez",
                            linkedin   =" wilberthramirez",
